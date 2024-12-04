@@ -29,7 +29,7 @@ else
     echo "App Version: $appversion"
     echo "App Status: $appstatus"
     echo "App Icon: $appicon"
-    echo "Minimal volteraOS version: $minversion"
+    echo "Minimal OptionBSD version: $minversion"
     echo "API Version: $apiver"
 
     echo
