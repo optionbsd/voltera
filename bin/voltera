@@ -69,10 +69,7 @@ else
 
         # Компилируем исходники для платформы с поддержкой GTK
         $compiler -o "$temp_dir/main" "$temp_dir"/*.c \
-            $(pkg-config --cflags --libs gtk+-3.0) \
-            -I/Users/mafan2010/ultralight/include \
-            -L/Users/mafan2010/ultralight/bin \
-            -lultralight -lAppCore -lWebCore -lUltralightCore
+            $(pkg-config --cflags --libs gtk+-3.0)
 
         # Проверяем успешность сборки
         if [ $? -eq 0 ]; then
