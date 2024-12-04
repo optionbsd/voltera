@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Check if target directory argument is provided
+if [ -z "$1" ]; then
+  echo "Error: No target directory specified."
+  exit 1
+fi
+
+TARGET_DIR="$1"
+
+# Define the path to VolteraApp.zip
+VOLTERA_APP_ZIP="$HOME/VolteraSDK/res/VolteraApp.zip"
+
+# Check if VolteraApp.zip file exists
+if [ ! -f "$VOLTERA_APP_ZIP" ]; then
+  echo "Error: VolteraApp.zip file not found at $VOLTERA_APP_ZIP."
+  exit 1
+fi
+
+# Unzip the archive to the specified directory
+echo "Unpacking VolteraApp.zip to $TARGET_DIR..."
+unzip -o "$VOLTERA_APP_ZIP" -d "$TARGET_DIR"
+
+# Check if unzip was successful
+if [ $? -eq 0 ]; then
+  echo "Project successfully unpacked to $TARGET_DIR."
+
+  # Remove .DS_Store files and __MACOSX directories
+  echo "Cleaning up unwanted files..."
+  find "$TARGET_DIR" -name '.DS_Store' -exec rm -f {} \;
+  find "$TARGET_DIR" -name '__MACOSX' -exec rm -rf {} \;
+
+  echo "Cleanup completed."
+else
+  echo "Error unpacking the archive."
+  exit 1
+fi

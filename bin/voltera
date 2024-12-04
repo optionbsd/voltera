@@ -1,0 +1,115 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Where is the path to build?"
+else
+    full_path=$(realpath "$1")
+    manifest="$full_path/Manifest.xml"
+
+    if [ ! -f "$manifest" ]; then
+        echo "Manifest.xml not found at $manifest"
+        exit 1
+    fi
+
+    echo "Building $full_path..."
+
+    # Извлекаем информацию о приложении из Manifest.xml с помощью xmllint
+    echo "Application Information:"
+    echo "----------------------------"
+    appname=$(xmllint --xpath 'string(//Application/appname)' "$manifest")
+    appid=$(xmllint --xpath 'string(//Application/appid)' "$manifest")
+    appversion=$(xmllint --xpath 'string(//Application/appversion)' "$manifest")
+    appstatus=$(xmllint --xpath 'string(//Application/appstatus)' "$manifest")
+    appicon=$(xmllint --xpath 'string(//Application/appicon)' "$manifest")
+    minversion=$(xmllint --xpath 'string(//Application/minversion)' "$manifest")
+    apiver=$(xmllint --xpath 'string(//Application/apiver)' "$manifest")
+
+    echo "App Name: $appname"
+    echo "App ID: $appid"
+    echo "App Version: $appversion"
+    echo "App Status: $appstatus"
+    echo "App Icon: $appicon"
+    echo "Minimal volteraOS version: $minversion"
+    echo "API Version: $apiver"
+
+    echo
+    echo "Build Information:"
+    echo "------------------"
+    platforms=$(xmllint --xpath '//Build/platform/text()' "$manifest" | tr -s '\n' ' ')
+
+    builder=$(xmllint --xpath 'string(//Build/builder)' "$manifest")
+    src=$(xmllint --xpath 'string(//Build/src)' "$manifest")
+
+    echo "Builder: $builder"
+    echo "Source Directory: $src"
+
+    echo
+    echo "Privacy Permissions:"
+    echo "--------------------"
+    permissions=$(xmllint --xpath '//Privacy/pressmission/text()' "$manifest" | tr '\n' '\n' | sed 's/^/  /')
+    echo "$permissions"
+
+    # Сборка для каждой архитектуры
+    for platform in $platforms; do
+        echo "Building for platform: $platform"
+
+        # Проверяем, какой компилятор использовать
+        if [ "$builder" == "clang" ]; then
+            compiler="clang"
+        else
+            compiler="gcc"
+        fi
+
+        # Создаем временную папку для сборки
+        temp_dir="$full_path/temp/$platform"
+        mkdir -p "$temp_dir"
+
+        # Копируем все исходники в temp папку
+        cp -r "$full_path/$src"/* "$temp_dir"
+
+        # Компилируем исходники для платформы с поддержкой GTK
+        $compiler -o "$temp_dir/main" "$temp_dir"/*.c \
+            $(pkg-config --cflags --libs gtk+-3.0) \
+            -I/Users/mafan2010/ultralight/include \
+            -L/Users/mafan2010/ultralight/bin \
+            -lultralight -lAppCore -lWebCore -lUltralightCore
+
+        # Проверяем успешность сборки
+        if [ $? -eq 0 ]; then
+            # Создаем директорию для выходных файлов
+            output_dir="$full_path/bin/$platform"
+            mkdir -p "$output_dir"
+            mv "$temp_dir/main" "$output_dir/"
+            echo "Build completed successfully for $platform"
+        else
+            echo "Build failed for $platform"
+        fi
+
+        # Очищаем временные файлы
+        rm -rf "$temp_dir"
+    done
+
+    # Создание пакета
+    echo "Creating package..."
+
+    # Создаем папку pkg
+    pkg_dir="$full_path/pkg"
+    mkdir -p "$pkg_dir"
+
+    # Копируем необходимые файлы и директории в pkg
+    cp "$full_path/Manifest.xml" "$pkg_dir/"
+    cp -r "$full_path/bin" "$pkg_dir/"
+    cp -r "$full_path/res" "$pkg_dir/"
+
+    # Формируем название архива
+    package_name="${appname}-${appversion}-${appstatus}.opa"
+
+    # Запаковываем содержимое папки pkg (не саму папку)
+    cd "$pkg_dir" || exit 1
+    zip -r "$full_path/$package_name" ./*
+
+    # Очищаем папку pkg
+    rm -rf "$pkg_dir"
+
+    echo "Package $package_name created successfully."
+fi
